@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+
+<html ng-app="flowSolverApp">
+	<head>
+		<title>Graph Output</title>
+		<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.3/angular.min.js"></script>
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+		
+		<script>
+			var flowSolverApp = angular.module("flowSolverApp", []);
+			var graph = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
+			var graphs = [];
+
+			//coordinates of start and target nodes
+			var start = [2,0];
+			var target = [0,3];
+
+			function g2s(){
+				var buffer = "";
+
+				for(var i = 0; i < graph[0].length; i ++){
+					for(var j = 0; j < graph.length; j ++){
+						buffer = buffer + " " + (graph[i][j]);
+					}
+					console.log(i + ": " + buffer);
+					buffer = ""
+				}
+				console.log("");
+			}
+
+			flowSolverApp.controller("flowSolverCtl", function($scope){
+				$scope.graph = graph;
+			});
+			
+			function DFS(graph, arr, pathSoFar){
+				//console.log("DFS called at " + arr[0] + " " + arr[1]);
+
+				var y = arr[0];
+				var x = arr[1];
+				//an unvisited node was found
+				if(y == target[0] && x == target[1]){
+					console.log(pathSoFar.join());
+					pathSoFar = []
+					//reset graph to only contain known paths so far based on pathsSoFar
+					//first remove any 1 not in pathSoFar
+					//TODO
+
+					g2s();
+				} else{
+					graph[y][x] = 1; //mark as visited
+				}
+				var exploreNext = AdjacentEdges(y,x);
+				
+				while(exploreNext.length > 0){
+					var nextVertex = exploreNext.shift();
+					
+					if(graph[nextVertex[0]][nextVertex[1]] == 0){
+						pathSoFar.splice(0,0,[y,x]);
+						DFS(graph, nextVertex, pathSoFar);
+					}
+				}
+			}
+
+			//remember, addressing array directly entails (y,x) coordinate referencing
+			function AdjacentEdges(y,x){ 
+				//returns array of arrays containing coordinates (y,x) of adjacent edges
+				var adjacents = [];
+				var checkUp = (y-1 >= 0); //allowed to check up
+				var checkLeft = (x-1 >= 0); //allowed to check left
+				var checkDown = (y+1 < graph.length);
+				var checkRight = (x+1 < graph[0].length); //even though we assume square matrix
+
+				if(checkDown){
+					adjacents.push([y+1,x])
+				}
+				if(checkRight){
+					adjacents.push([y,x+1]);
+				}
+				if(checkUp){
+					adjacents.push([y-1,x]);
+				}
+				if(checkLeft){
+					adjacents.push([y,x-1]);
+				}
+				if(checkUp && checkRight){
+					adjacents.push([y-1,x+1]);
+				}
+				if(checkUp && checkLeft){
+					adjacents.push([y-1,x-1]);
+				}
+				if(checkDown && checkLeft){
+					adjacents.push([y+1,x-1]);
+				}
+				if(checkDown && checkRight){
+					adjacents.push([y+1,x+1]);
+				}
+
+				return adjacents;
+			}
+
+		</script>
+	</head>
+
+	<body ng-controller="flowSolverCtl">
+		<div class="panel-body">
+			<table class="table" style="width:150px" ng-model="flowOutputTable">
+				<tbody> <!-- yes, this is a bad use of table, should be using fixed grid? -->
+					<tr ng-repeat="i in graph"><td ng-repeat="j in i track by $index">{{j}}</td></tr>
+				</tbody>
+			</table>
+		</div>
+	</body>
+</html>

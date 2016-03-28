@@ -10,66 +10,109 @@
 			var flowSolverApp = angular.module("flowSolverApp", []);
 			var graph = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
 			var graphs = [];
-
 			//coordinates of start and target nodes
 			var start = [2,0];
 			var target = [0,3];
-
-			function g2s(){
+			function g2s(g){
 				var buffer = "";
-
-				for(var i = 0; i < graph[0].length; i ++){
-					for(var j = 0; j < graph.length; j ++){
-						buffer = buffer + " " + (graph[i][j]);
+				for(var i = 0; i < g[0].length; i ++){
+					for(var j = 0; j < g.length; j ++){
+						buffer = buffer + " " + (g[i][j]);
 					}
 					console.log(i + ": " + buffer);
 					buffer = ""
 				}
 				console.log("");
 			}
-
 			flowSolverApp.controller("flowSolverCtl", function($scope){
 				$scope.graph = graph;
 			});
-			
-			function DFS(graph, arr, pathSoFar){
-				//console.log("DFS called at " + arr[0] + " " + arr[1]);
 
-				var y = arr[0];
-				var x = arr[1];
-				//an unvisited node was found
-				if(y == target[0] && x == target[1]){
-					console.log(pathSoFar.join());
-					pathSoFar = []
-					//reset graph to only contain known paths so far based on pathsSoFar
-					//first remove any 1 not in pathSoFar
-					//TODO
+			function AllPossiblePaths(){
+				//calls DFS with multiple markers to generate all possible paths
 
-					g2s();
-				} else{
-					graph[y][x] = 1; //mark as visited
-				}
-				var exploreNext = AdjacentEdges(y,x);
-				
-				while(exploreNext.length > 0){
-					var nextVertex = exploreNext.shift();
-					
-					if(graph[nextVertex[0]][nextVertex[1]] == 0){
-						pathSoFar.splice(0,0,[y,x]);
-						DFS(graph, nextVertex, pathSoFar);
+				//for each graph returned by DFS, ensure the path has no multiple routes.
+				//if there are, create new path graphs by dividing the multiple routes graph into its parts
+
+				//    0 0 0 2	This graph has only one path
+				//	  0 0 0 2
+	  			//	  2 0 0 2
+				//	  2 2 2 2
+				//How do we detect this graph has only one path? If any marker value has more than 2 neighbours, it contains duplicates
+
+
+				//    1 1 1 2	This graph with marker 1 has multiple paths
+				//    1 1 1 2
+				//    1 1 1 2
+				//    2 2 2 2
+
+				var marker = 1;
+				var initialGraph = DFS(graph, start, marker);
+				//check for multiple paths
+				//for each neighbour of every node marked '1' in initial graph, check if it has >2 neighbours
+				var totalNeighboursOfMarker = 0;
+				for(var i =0; i < initialGraph.length; i ++){
+					for(var j = 0; j < initialGraph[i].length; j ++){
+						if (initialGraph[i][j] == marker){
+							//check for more than 2 neighbours
+							var adjacentEdges = AdjacentEdges(i,j);
+							for(var k = 0; k < adjacentEdges.length; k ++){
+								//adjacentEdges function takes into account diagonals, which we don't want to count
+								if(initialGraph[adjacentEdges[k][0]][adjacentEdges[k][1]] == marker && !IsDiagonal([i,j],[adjacentEdges[k][0],adjacentEdges[k][1]])){
+									totalNeighboursOfMarker ++;
+								}
+							}
+						}
+						console.log("Total neighbours of marker at " + i + "," + j +":" + totalNeighboursOfMarker)
+						totalNeighboursOfMarker = 0;
 					}
 				}
-			}
 
+				g2s(initialGraph);
+
+
+				marker = 2;
+				var secondGraph = DFS(initialGraph, start, marker);
+				g2s(secondGraph);
+
+			}
+			
+			function DFS(graph, start, marker){
+				var S = []; //stack
+				graph[start[0]][start[1]] = 0; //mark start node as unvisited
+				graph[target[0][target[1]]] = 0; //mark target as unvisited
+				S.push(start);
+				var pathFound = false;
+				while (S.length > 0 ){
+					var v = S.pop();
+					var vx = v[1];
+					var vy = v[0];
+					//if v is not labeled as discovered yet, mark it as discovered and search its neighbours
+					if(graph[vy][vx] == 0){
+						graph[vy][vx] = marker;
+						//console.log(vy+","+vx)
+						if(vy == target[0] && vx == target[1]){
+							break; //kill the search 
+						}
+						//for all neighbours of v
+						var neighbours = AdjacentEdges(vy,vx);
+						while(neighbours.length > 0){
+							//if(graph[neighbours[neighbours.length-1][0]][neighbours[neighbours.length-1][1]] == 0 ){
+								S.push(neighbours.pop());
+							
+						}
+					}
+				}
+				return graph.slice(); //return copy of graph that is marked with a path
+			}
 			//remember, addressing array directly entails (y,x) coordinate referencing
 			function AdjacentEdges(y,x){ 
-				//returns array of arrays containing coordinates (y,x) of adjacent edges
+				//returns array of arrays containing coordinates (y,x) of adjacent edges. tells nothing about their value
 				var adjacents = [];
 				var checkUp = (y-1 >= 0); //allowed to check up
 				var checkLeft = (x-1 >= 0); //allowed to check left
 				var checkDown = (y+1 < graph.length);
 				var checkRight = (x+1 < graph[0].length); //even though we assume square matrix
-
 				if(checkDown){
 					adjacents.push([y+1,x])
 				}
@@ -94,10 +137,8 @@
 				if(checkDown && checkRight){
 					adjacents.push([y+1,x+1]);
 				}
-
 				return adjacents;
 			}
-
 		</script>
 	</head>
 
